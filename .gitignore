@@ -1,0 +1,10 @@
+node_modules/
+uploads/
+data/
+.env
+scripts/deploy/state.env
+security/
+*.log
+*.pem
+.DS_Store
+credentials.info

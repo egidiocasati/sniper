@@ -1,0 +1,17 @@
+module.exports = {
+    PORT: process.env.PORT || 3001,
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    SESSION_SECRET: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    DB_PATH: process.env.DB_PATH || './data/sniper.db',
+    UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
+    MAX_FILE_SIZE: 5 * 1024 * 1024,
+    PENDING_TIMEOUT_MINUTES: parseInt(process.env.PENDING_TIMEOUT_MINUTES || '240', 10),
+    CONFIRMATION_MIN_MINUTES: parseInt(process.env.CONFIRMATION_MIN_MINUTES || '30', 10),
+    SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+    SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    SMTP_FROM: process.env.SMTP_FROM || 'noreply@sniper.app',
+    APP_URL: process.env.APP_URL || 'http://localhost:3001',
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+};

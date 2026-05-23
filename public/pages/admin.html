@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sniper - Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Sniper</h1>
+        <div class="header-right">
+            <span id="user-name"></span>
+            <a href="/">App</a>
+            <button onclick="logout()">Esci</button>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <h2>Impostazioni</h2>
+        <div class="card" id="settings-section">
+            <div class="form-group">
+                <label for="setting-subtitle">Nome visualizzato (dopo "Sniper -")</label>
+                <input type="text" id="setting-subtitle" placeholder="es. Viale Teodorico 7">
+            </div>
+            <div class="form-group">
+                <label for="setting-confirm-min">Minuti minimi per conferma infrazione</label>
+                <input type="number" id="setting-confirm-min" min="1" max="1440" onchange="updateCountdownDisplay()" oninput="updateCountdownDisplay()">
+            </div>
+            <div class="form-group">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+                    <input type="checkbox" id="setting-countdown-enabled" onchange="updateCountdownDisplay()">
+                    Countdown abilitato (blocca conferma fino allo scadere del tempo)
+                </label>
+                <div id="countdown-value-display" style="display:none; margin-top:8px; padding:8px 12px; background:var(--bg); border-radius:6px; font-size:0.95rem; color:var(--text)">
+                    Durata countdown: <strong id="countdown-value-text">-</strong>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Salva impostazioni</button>
+            <span id="settings-msg" style="margin-left:12px; font-size:0.9rem"></span>
+        </div>
+
+        <h2 style="margin-top:32px">Invita utente</h2>
+        <form class="invite-form" onsubmit="sendInvite(event)">
+            <input type="email" id="invite-email" placeholder="email@esempio.com" required>
+            <button type="submit" id="invite-btn" class="btn btn-primary">Invita</button>
+        </form>
+        <div id="invite-msg" style="display:none"></div>
+
+        <h2>Utenti</h2>
+        <div style="overflow-x:auto">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Stato</th>
+                        <th>Creato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+        </div>
+
+        <h2 style="margin-top:32px">Gestione foto</h2>
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterAdminPhotos(null, this)">Tutte</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('PENDING', this)">Pendenti</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('INFRAZIONE', this)">Infrazioni</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('SCARTO', this)">Scarti</button>
+        </div>
+        <div id="admin-photo-list"></div>
+    </div>
+
+    <!-- Detail modal -->
+    <div id="admin-photo-modal" class="modal" style="display:none"></div>
+
+    <footer class="legal-footer">
+        <a href="/privacy">Privacy</a>
+        <a href="/cookies">Cookie</a>
+        <a href="/terms">Termini e Condizioni</a>
+        <br><a href="https://github.com/egidiocasati/sniper" target="_blank" rel="noopener">v0.1.0</a>
+    </footer>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

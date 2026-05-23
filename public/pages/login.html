@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sniper - Accesso</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2 id="page-title">Accesso</h2>
+
+        <div id="alert" class="alert" style="display:none"></div>
+
+        <!-- Login form -->
+        <form id="login-form" class="card">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Accedi</button>
+            <p style="text-align:center; margin-top:12px">
+                <a href="#" id="forgot-link" style="color:var(--primary); font-size:0.9rem">Password dimenticata?</a>
+            </p>
+        </form>
+
+        <!-- Register form (shown when ?token= is present) -->
+        <form id="register-form" class="card" style="display:none">
+            <div class="form-group">
+                <label for="reg-name">Nome</label>
+                <input type="text" id="reg-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="reg-password">Password (min 8 caratteri)</label>
+                <input type="password" id="reg-password" name="password" required minlength="8" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="reg-password2">Conferma password</label>
+                <input type="password" id="reg-password2" required minlength="8" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Registrati</button>
+        </form>
+
+        <!-- Forgot password form -->
+        <form id="forgot-form" class="card" style="display:none">
+            <div class="form-group">
+                <label for="forgot-email">Email</label>
+                <input type="email" id="forgot-email" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Invia link di reset</button>
+            <p style="text-align:center; margin-top:12px">
+                <a href="/login" style="color:var(--primary); font-size:0.9rem">Torna al login</a>
+            </p>
+        </form>
+    </div>
+
+    <script>
+    // Load app subtitle
+    fetch('/api/settings/public').then(r => r.json()).then(s => {
+        if (s.app_subtitle) {
+            document.title = `Sniper - ${s.app_subtitle} - Accesso`;
+            const h2 = document.getElementById('page-title');
+            if (h2 && !token) h2.textContent = `Sniper - ${s.app_subtitle}`;
+        }
+    }).catch(() => {});
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (token) {
+        document.getElementById('page-title').textContent = 'Registrazione';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'block';
+    }
+
+    function showAlert(msg, type) {
+        const el = document.getElementById('alert');
+        el.textContent = msg;
+        el.className = `alert alert-${type}`;
+        el.style.display = 'block';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                window.location.href = '/';
+            } else {
+                showAlert(data.error, 'error');
+            }
+        } catch (err) {
+            showAlert('Errore di connessione', 'error');
+        }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value;
+        const password = document.getElementById('reg-password').value;
+        const password2 = document.getElementById('reg-password2').value;
+
+        if (password !== password2) {
+            showAlert('Le password non coincidono', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, name, password })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showAlert('Registrazione completata! Ora puoi accedere.', 'success');
+                setTimeout(() => { window.location.href = '/login'; }, 2000);
+            } else {
+                showAlert(data.error, 'error');
+            }
+        } catch (err) {
+            showAlert('Errore di connessione', 'error');
+        }
+    });
+
+    document.getElementById('forgot-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('page-title').textContent = 'Recupero password';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('forgot-form').style.display = 'block';
+    });
+
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgot-email').value;
+
+        try {
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            showAlert('Se l\'email esiste, riceverai un link di reset.', 'info');
+        } catch (err) {
+            showAlert('Errore di connessione', 'error');
+        }
+    });
+    </script>
+
+    <footer class="legal-footer">
+        <a href="/privacy">Privacy</a>
+        <a href="/cookies">Cookie</a>
+        <a href="/terms">Termini e Condizioni</a>
+        <br>Condominio Viale Teodorico 7 &ndash; <a href="https://www.studio-bonomi.it/" target="_blank" rel="noopener">Studio Bonomi</a>
+        <br><a href="https://github.com/egidiocasati/sniper" target="_blank" rel="noopener">v0.1.0</a>
+    </footer>
+</body>
+</html>
