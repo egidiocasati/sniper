@@ -2,10 +2,14 @@ let cameraStream = null;
 let videoEl, canvasEl, ctx;
 let confirmingUuid = null; // UUID of the PENDING photo being confirmed
 
-async function initCamera() {
+function initCameraElements() {
     videoEl = document.getElementById('camera-video');
     canvasEl = document.getElementById('camera-canvas');
     ctx = canvasEl.getContext('2d');
+}
+
+async function startCamera() {
+    if (!videoEl) initCameraElements();
 
     try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -20,6 +24,7 @@ async function initCamera() {
         await videoEl.play();
 
         document.getElementById('camera-error').style.display = 'none';
+        document.getElementById('camera-open').style.display = 'none';
         document.getElementById('camera-live').style.display = 'block';
     } catch (err) {
         console.error('Camera error:', err);
@@ -30,12 +35,35 @@ async function initCamera() {
     }
 }
 
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+    if (videoEl) {
+        videoEl.srcObject = null;
+    }
+}
+
+function openCamera() {
+    startCamera();
+}
+
+function closeCamera() {
+    stopCamera();
+    document.getElementById('camera-live').style.display = 'none';
+    document.getElementById('camera-open').style.display = '';
+}
+
 function capturePhoto() {
     if (!videoEl || !videoEl.videoWidth) return;
 
     canvasEl.width = videoEl.videoWidth;
     canvasEl.height = videoEl.videoHeight;
     ctx.drawImage(videoEl, 0, 0);
+
+    // Stop camera stream after capturing
+    stopCamera();
 
     document.getElementById('preview-img').src = canvasEl.toDataURL('image/jpeg', 0.85);
     document.getElementById('preview-section').style.display = 'block';
@@ -44,7 +72,7 @@ function capturePhoto() {
 
 function retakePhoto() {
     document.getElementById('preview-section').style.display = 'none';
-    document.getElementById('camera-live').style.display = 'block';
+    startCamera();
 }
 
 // Called from photo list when user taps "Conferma" on a PENDING card
@@ -62,6 +90,9 @@ function startConfirmation(uuid, imgSrc, notes, serverTs, userName) {
 
     // Update button label
     document.getElementById('upload-btn').textContent = 'Conferma infrazione';
+
+    // Open camera automatically for confirmation
+    startCamera();
 
     // Scroll to camera
     document.getElementById('camera-section').scrollIntoView({ behavior: 'smooth' });
@@ -105,7 +136,10 @@ async function doUpload() {
             return;
         }
 
-        retakePhoto();
+        // Reset UI: hide preview, show open button
+        document.getElementById('preview-section').style.display = 'none';
+        document.getElementById('camera-live').style.display = 'none';
+        document.getElementById('camera-open').style.display = '';
         document.getElementById('photo-notes').value = '';
 
         if (confirmingUuid) {
@@ -132,7 +166,5 @@ function showToast(message, type) {
 }
 
 window.addEventListener('beforeunload', () => {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-    }
+    stopCamera();
 });

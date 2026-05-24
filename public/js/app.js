@@ -45,7 +45,6 @@ async function initApp() {
         const isMobile = window.innerWidth < 768;
         if (isMobile && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             document.getElementById('camera-section').style.display = 'block';
-            initCamera();
         }
 
         // Show "Come funziona" card on first visit

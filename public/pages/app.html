@@ -78,10 +78,16 @@
             <button class="btn btn-small btn-secondary" onclick="cancelConfirmation()">Annulla</button>
         </div>
 
+        <!-- Open camera button (shown when camera is off) -->
+        <div id="camera-open" style="text-align:center; padding: 20px 16px;">
+            <button class="btn btn-primary" onclick="openCamera()">Apri fotocamera</button>
+        </div>
+
         <div id="camera-live" class="camera-container" style="display:none">
             <video id="camera-video" autoplay playsinline muted></video>
             <canvas id="camera-canvas"></canvas>
             <button class="capture-btn" onclick="capturePhoto()" title="Scatta foto"></button>
+            <button class="btn btn-secondary btn-small camera-close-btn" onclick="closeCamera()">Chiudi fotocamera</button>
         </div>
 
         <div id="preview-section" style="display:none">
