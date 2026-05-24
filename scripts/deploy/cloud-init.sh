@@ -13,6 +13,10 @@ curl -fsSL https://nodejs.org/dist/v20.19.2/node-v20.19.2-linux-x64.tar.xz -o /t
 tar -xf /tmp/node.tar.xz -C /usr/local --strip-components=1
 rm -f /tmp/node.tar.xz
 
+# Disable dnf-makecache (consumes ~720MB RAM, causes OOM on micro VMs)
+systemctl disable --now dnf-makecache.timer 2>/dev/null
+systemctl mask dnf-makecache.timer 2>/dev/null
+
 # App directory
 mkdir -p /opt/sniper/uploads /opt/sniper/data
 chown -R opc:opc /opt/sniper

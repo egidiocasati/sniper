@@ -151,6 +151,7 @@ sniper/
 - **ExecStart**: /usr/local/bin/node server.js
 - **Porta**: 3001 (firewalld forward-port 80→3001 e 443→3001, persistente)
 - **NOTA**: NON usare iptables su OL9 (usa nftables backend, regole non persistono). Usare firewalld.
+- **NOTA**: dnf-makecache.timer disabilitato e mascherato (consumava 720MB RAM causando OOM sulla micro VM)
 - **Restart**: on-failure, 5s delay
 
 ### Deploy rapido (rsync + restart)
