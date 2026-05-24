@@ -149,7 +149,8 @@ sniper/
 - **User**: opc
 - **WorkingDirectory**: /opt/sniper
 - **ExecStart**: /usr/local/bin/node server.js
-- **Porta**: 3001 (iptables redirige 80→3001, 443→3001)
+- **Porta**: 3001 (firewalld forward-port 80→3001 e 443→3001, persistente)
+- **NOTA**: NON usare iptables su OL9 (usa nftables backend, regole non persistono). Usare firewalld.
 - **Restart**: on-failure, 5s delay
 
 ### Deploy rapido (rsync + restart)

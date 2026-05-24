@@ -404,18 +404,30 @@ async function showAdminPhotoDetail(uuid) {
                     <img src="/api/photos/${photo.confirmed_photo_uuid}/image" alt="Conferma" style="width:100%;border-radius:8px;margin:8px 0" />
                     <p><strong>Confermata:</strong> ${formatDate(photo.confirmed_at)}</p>`;
         }
-        html += '</div></div>';
+        html += `
+                    <div style="padding: 0 20px 18px; text-align:center;">
+                        <button class="btn btn-secondary" onclick="closeAdminModal()" style="width:100%">Chiudi</button>
+                    </div>
+                </div>`;
         modal.innerHTML = html;
         modal.style.display = 'flex';
+
+        modal.onclick = function(e) {
+            if (e.target === modal) closeAdminModal();
+        };
     } catch (e) {
         console.error('Show detail error:', e);
     }
 }
 
+function closeAdminModal() {
+    const modal = document.getElementById('admin-photo-modal');
+    modal.style.display = 'none';
+    modal.onclick = null;
+}
+
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        document.getElementById('admin-photo-modal').style.display = 'none';
-    }
+    if (e.key === 'Escape') closeAdminModal();
 });
 
 function apiFetch(url, options = {}) {

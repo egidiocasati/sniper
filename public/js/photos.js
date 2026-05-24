@@ -151,16 +151,38 @@ async function showDetail(uuid) {
                     ${photo.confirmed_notes ? `<p><strong>Note conferma:</strong> ${escapeHtml(photo.confirmed_notes)}</p>` : ''}`;
         }
 
-        html += `</div></div>`;
+        html += `
+                    <div style="padding: 0 20px 18px; text-align:center;">
+                        <button class="btn btn-secondary" onclick="closeModal()" style="width:100%">Chiudi</button>
+                    </div>
+                </div>`;
         modal.innerHTML = html;
         modal.style.display = 'flex';
+
+        // Tap on overlay (outside modal-content) closes modal
+        modal.onclick = function(e) {
+            if (e.target === modal) closeModal();
+        };
+
+        // Swipe down to close
+        let touchStartY = 0;
+        const content = modal.querySelector('.modal-content');
+        content.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        content.addEventListener('touchend', function(e) {
+            const deltaY = e.changedTouches[0].clientY - touchStartY;
+            if (deltaY > 80) closeModal();
+        }, { passive: true });
     } catch (e) {
         console.error('Show detail error:', e);
     }
 }
 
 function closeModal() {
-    document.getElementById('photo-detail-modal').style.display = 'none';
+    const modal = document.getElementById('photo-detail-modal');
+    modal.style.display = 'none';
+    modal.onclick = null;
 }
 
 function filterPhotos(status, btn) {

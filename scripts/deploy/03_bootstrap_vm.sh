@@ -116,31 +116,28 @@ echo "  Service status:"
 $SSH 'sudo systemctl --no-pager --lines=5 status sniper || true'
 
 echo ""
-echo "==> 7. Firewall (port 80/443)"
-$SSH 'sudo firewall-cmd --permanent --add-service=http --add-service=https 2>/dev/null && sudo firewall-cmd --reload' || true
+echo "==> 7. Firewall + port forwarding (firewalld, persistent across reboots)"
+$SSH "sudo firewall-cmd --permanent --add-service=http --add-service=https 2>/dev/null
+sudo firewall-cmd --permanent --add-forward-port=port=80:proto=tcp:toport=$APP_PORT 2>/dev/null
+sudo firewall-cmd --permanent --add-forward-port=port=443:proto=tcp:toport=$APP_PORT 2>/dev/null
+sudo firewall-cmd --reload
+echo 'firewalld configured'"
 
 echo ""
-echo "==> 8. Port redirect 80 -> $APP_PORT (no nginx needed)"
-$SSH "sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port $APP_PORT
-sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port $APP_PORT
-sudo sh -c 'iptables-save > /etc/sysconfig/iptables'
-echo 'iptables rules saved'"
-
-echo ""
-echo "==> 9. End-to-end test"
+echo "==> 8. End-to-end test"
 sleep 2
-echo "  Local test:"
-$SSH "curl -sf http://127.0.0.1:$APP_PORT/api/health" || echo "  WARN: local health check failed"
+echo "  Local test (HTTPS):"
+$SSH "curl -sfk https://127.0.0.1:$APP_PORT/api/health" || echo "  WARN: local health check failed"
 echo ""
 echo "  External test:"
-curl -sS --max-time 10 "http://$VM_PUBLIC_IP/api/health" || echo "  WARN: external test failed (check firewall)"
+curl -sS --max-time 10 -k "https://$VM_PUBLIC_IP/api/health" || echo "  WARN: external test failed (check firewall)"
 
 echo ""
 echo "==================================================="
 echo "Bootstrap complete!"
 echo ""
-echo "  App: http://$VM_PUBLIC_IP"
-echo "  Health: http://$VM_PUBLIC_IP/api/health"
+echo "  App: https://$VM_PUBLIC_IP"
+echo "  Health: https://$VM_PUBLIC_IP/api/health"
 echo ""
 echo "  Next steps:"
 echo "  1. DNS: $APP_DOMAIN -> $VM_PUBLIC_IP"
