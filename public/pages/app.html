@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sniper - Parcheggio</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <style>
         .toast {
             position: fixed;
@@ -32,9 +33,39 @@
         <div class="header-right">
             <span id="user-name"></span>
             <a href="/admin" id="admin-link" style="display:none">Admin</a>
+            <button class="help-btn" onclick="showHowItWorks()" title="Come funziona">?</button>
             <button onclick="logout()">Esci</button>
         </div>
     </header>
+
+    <!-- Come funziona -->
+    <div id="how-it-works" class="how-it-works" style="display:none">
+        <h3>Come funziona</h3>
+        <div class="how-steps">
+            <div class="how-step">
+                <span class="how-step-num">1</span>
+                <div>
+                    <strong>Scatta una foto</strong>
+                    <p>Fotografa il veicolo in sosta irregolare.</p>
+                </div>
+            </div>
+            <div class="how-step">
+                <span class="how-step-num">2</span>
+                <div>
+                    <strong>Attendi il tempo minimo</strong>
+                    <p>Il countdown ti indica quando puoi procedere alla conferma.</p>
+                </div>
+            </div>
+            <div class="how-step">
+                <span class="how-step-num">3</span>
+                <div>
+                    <strong>Conferma l'infrazione</strong>
+                    <p>Torna sul posto e scatta una seconda foto per confermare.</p>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-small" onclick="dismissHowItWorks()">Ho capito</button>
+    </div>
 
     <!-- Camera section (mobile only) -->
     <section id="camera-section" class="camera-section" style="display:none">

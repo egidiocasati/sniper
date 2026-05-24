@@ -8,7 +8,7 @@ export REGION="eu-milan-1"
 
 # Compartment: root compartment of the sniper tenancy
 # Get from OCI Console -> Tenancy Details -> OCID
-export COMPARTMENT_ID="${COMPARTMENT_ID:-FILL_AFTER_ACCOUNT_CREATION}"
+export COMPARTMENT_ID="${COMPARTMENT_ID:-ocid1.tenancy.oc1..aaaaaaaaqqqzv2pgslp3e47jite6lmp7qxg5feg2iboqao2vuglnzj3q7orq}"
 
 # Network
 export VCN_NAME="sniper-vcn"
@@ -21,9 +21,9 @@ export NSG_NAME="sniper-nsg"
 
 # Compute
 export VM_NAME="sniper-vm"
-export SHAPE="VM.Standard.A1.Flex"
+export SHAPE="VM.Standard.E2.1.Micro"
 export OCPUS="1"
-export MEMORY_GB="6"
+export MEMORY_GB="1"
 # IMAGE_ID: discover at deploy time with:
 #   oci --profile sniper compute image list --compartment-id $COMPARTMENT_ID \
 #     --operating-system "Oracle Linux" --operating-system-version "9" \

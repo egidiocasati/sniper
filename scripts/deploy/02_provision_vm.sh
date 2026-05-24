@@ -19,20 +19,18 @@ echo "==> 1. Discovering Availability Domain..."
 AD="$($OCI iam availability-domain list --query 'data[0].name' --raw-output)"
 echo "  AD: $AD"
 
-# Discover latest Oracle Linux 9 ARM image if needed
-if [ "$IMAGE_ID" = "DISCOVER_AT_DEPLOY" ] || [ -z "$IMAGE_ID" ]; then
-    echo ""
-    echo "==> 2. Discovering latest OL9 aarch64 image..."
-    IMAGE_ID="$($OCI compute image list \
-        --compartment-id "$COMPARTMENT_ID" \
-        --operating-system "Oracle Linux" \
-        --operating-system-version "9" \
-        --shape "$SHAPE" \
-        --sort-by TIMECREATED --sort-order DESC --limit 1 \
-        --query 'data[0].id' --raw-output)"
-    echo "  Image: $IMAGE_ID"
-    save_state IMAGE_ID "$IMAGE_ID"
-fi
+# Discover latest Oracle Linux 9 image for the chosen shape
+echo ""
+echo "==> 2. Discovering latest OL9 image for $SHAPE..."
+IMAGE_ID="$($OCI compute image list \
+    --compartment-id "$COMPARTMENT_ID" \
+    --operating-system "Oracle Linux" \
+    --operating-system-version "9" \
+    --shape "$SHAPE" \
+    --sort-by TIMECREATED --sort-order DESC --limit 1 \
+    --query 'data[0].id' --raw-output)"
+echo "  Image: $IMAGE_ID"
+save_state IMAGE_ID "$IMAGE_ID"
 
 echo ""
 echo "==> 3. Checking for existing VM..."
@@ -48,20 +46,36 @@ else
     echo "  Creating VM $VM_NAME..."
     SSH_KEY="$(cat "$SSH_PUBKEY_FILE")"
 
-    VM_INSTANCE_ID="$($OCI compute instance launch \
-        --compartment-id "$COMPARTMENT_ID" \
-        --availability-domain "$AD" \
-        --display-name "$VM_NAME" \
-        --shape "$SHAPE" \
-        --shape-config "{\"ocpus\":$OCPUS,\"memoryInGBs\":$MEMORY_GB}" \
-        --image-id "$IMAGE_ID" \
-        --subnet-id "$SUBNET_ID" \
-        --nsg-ids "[\"$NSG_ID\"]" \
-        --assign-public-ip true \
-        --hostname-label "sniper" \
-        --metadata "{\"ssh_authorized_keys\":\"$SSH_KEY\"}" \
-        --wait-for-state RUNNING \
-        --query 'data.id' --raw-output)"
+    # Cloud-init script for initial setup (swap + packages)
+    CLOUD_INIT="$(dirname "$0")/cloud-init.sh"
+    USERDATA_ARGS=()
+    if [ -f "$CLOUD_INIT" ]; then
+        echo "  Using cloud-init script for initial setup"
+        USERDATA_ARGS=(--user-data-file "$CLOUD_INIT")
+    fi
+
+    LAUNCH_ARGS=(
+        --compartment-id "$COMPARTMENT_ID"
+        --availability-domain "$AD"
+        --display-name "$VM_NAME"
+        --shape "$SHAPE"
+        --image-id "$IMAGE_ID"
+        --subnet-id "$SUBNET_ID"
+        --nsg-ids "[\"$NSG_ID\"]"
+        --assign-public-ip true
+        --hostname-label "sniper"
+        --metadata "{\"ssh_authorized_keys\":\"$SSH_KEY\"}"
+        "${USERDATA_ARGS[@]}"
+        --wait-for-state RUNNING
+        --query 'data.id' --raw-output
+    )
+
+    # Flex shapes need shape-config, fixed shapes don't
+    if [[ "$SHAPE" == *".Flex" ]]; then
+        LAUNCH_ARGS+=(--shape-config "{\"ocpus\":$OCPUS,\"memoryInGBs\":$MEMORY_GB}")
+    fi
+
+    VM_INSTANCE_ID="$($OCI compute instance launch "${LAUNCH_ARGS[@]}")"
     echo "  Created: $VM_INSTANCE_ID"
 fi
 save_state VM_INSTANCE_ID "$VM_INSTANCE_ID"

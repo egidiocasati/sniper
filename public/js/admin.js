@@ -3,11 +3,20 @@ async function initAdmin() {
         const res = await fetch('/api/auth/me');
         if (!res.ok) { window.location.href = '/login'; return; }
         const user = await res.json();
-        if (user.role !== 'admin') { window.location.href = '/'; return; }
+        if (user.role !== 'admin' && user.role !== 'councilor') { window.location.href = '/'; return; }
         window.CSRF_TOKEN = user.csrfToken;
         window.USER = user;
         document.getElementById('user-name').textContent = user.name;
-        loadSettings();
+        if (user.role === 'admin') {
+            loadSettings();
+        } else {
+            // Hide settings section for non-admin
+            const settingsSection = document.getElementById('settings-section');
+            if (settingsSection) settingsSection.style.display = 'none';
+            const settingsHeading = settingsSection ? settingsSection.previousElementSibling : null;
+            if (settingsHeading && settingsHeading.tagName === 'H2') settingsHeading.style.display = 'none';
+        }
+        loadInvites();
         loadUsers();
         loadAdminPhotos();
     } catch (e) {
@@ -20,31 +29,54 @@ async function loadUsers() {
     const users = await res.json();
 
     const tbody = document.getElementById('users-tbody');
-    tbody.innerHTML = users.map(u => `
-        <tr>
+    const isAdmin = window.USER && window.USER.role === 'admin';
+    tbody.innerHTML = users.map(u => {
+        const canToggle = u.role !== 'admin' && (isAdmin || u.role !== 'councilor');
+        const roleLabel = u.role === 'councilor' ? 'consigliere' : u.role;
+        let actions = '';
+        if (canToggle) {
+            actions += `<button class="btn btn-small ${u.active ? 'btn-danger' : 'btn-primary'}"
+                            onclick="toggleUser(${u.id}, this)">
+                        ${u.active ? 'Disabilita' : 'Abilita'}
+                    </button> `;
+        }
+        if (isAdmin && u.role !== 'admin') {
+            actions += `<button class="btn btn-small btn-secondary"
+                            onclick="toggleRole(${u.id}, this)">
+                        ${u.role === 'councilor' ? 'Declassa a Utente' : 'Promuovi a Consigliere'}
+                    </button>`;
+        }
+        return `<tr>
             <td>${escapeHtml(u.name)}</td>
             <td>${escapeHtml(u.email)}</td>
-            <td>${u.role}</td>
+            <td>${roleLabel}</td>
             <td class="${u.active ? 'status-active' : 'status-inactive'}">
                 ${u.active ? 'Attivo' : 'Disabilitato'}
             </td>
             <td>${formatDate(u.created_at)}</td>
-            <td>
-                ${u.role !== 'admin' ? `
-                    <button class="btn btn-small ${u.active ? 'btn-danger' : 'btn-primary'}"
-                            onclick="toggleUser(${u.id}, this)">
-                        ${u.active ? 'Disabilita' : 'Abilita'}
-                    </button>
-                ` : ''}
-            </td>
-        </tr>
-    `).join('');
+            <td style="white-space:nowrap">${actions}</td>
+        </tr>`;
+    }).join('');
 }
 
 async function toggleUser(id, btn) {
     btn.disabled = true;
     try {
         const res = await apiFetch(`/api/admin/users/${id}/toggle`, { method: 'POST' });
+        if (res.ok) loadUsers();
+        else {
+            const data = await res.json();
+            alert(data.error || 'Errore');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function toggleRole(id, btn) {
+    btn.disabled = true;
+    try {
+        const res = await apiFetch(`/api/admin/users/${id}/role`, { method: 'POST' });
         if (res.ok) loadUsers();
         else {
             const data = await res.json();
@@ -70,17 +102,92 @@ async function sendInvite(e) {
             body: { email }
         });
         const data = await res.json();
+        const msgEl = document.getElementById('invite-msg');
+        msgEl.style.display = '';
         if (res.ok) {
             input.value = '';
-            document.getElementById('invite-msg').textContent = `Invito inviato a ${email}`;
-            document.getElementById('invite-msg').className = 'alert alert-success';
+            msgEl.textContent = data.warning || `Invito inviato a ${email}`;
+            msgEl.className = data.warning ? 'alert alert-error' : 'alert alert-success';
+            loadInvites();
         } else {
-            document.getElementById('invite-msg').textContent = data.error;
-            document.getElementById('invite-msg').className = 'alert alert-error';
+            msgEl.textContent = data.error;
+            msgEl.className = 'alert alert-error';
         }
     } catch (e) {
-        document.getElementById('invite-msg').textContent = 'Errore di rete';
-        document.getElementById('invite-msg').className = 'alert alert-error';
+        const msgEl = document.getElementById('invite-msg');
+        msgEl.style.display = '';
+        msgEl.textContent = 'Errore di rete';
+        msgEl.className = 'alert alert-error';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// --- Invites ---
+
+async function loadInvites() {
+    try {
+        const res = await apiFetch('/api/admin/invites');
+        const invites = await res.json();
+        const tbody = document.getElementById('invites-tbody');
+
+        if (!invites.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light)">Nessun invito inviato</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = invites.map(inv => {
+            let badgeClass, badgeText;
+            if (inv.status === 'accepted') { badgeClass = 'badge-infrazione'; badgeText = 'Accettato'; }
+            else if (inv.status === 'expired') { badgeClass = 'badge-scarto'; badgeText = 'Scaduto'; }
+            else { badgeClass = 'badge-pending'; badgeText = 'In attesa'; }
+
+            const actions = inv.status === 'pending' ? `
+                <button class="btn btn-small btn-primary" onclick="resendInvite(${inv.id}, this)">Re-invia</button>
+                <button class="btn btn-small btn-danger" onclick="cancelInvite(${inv.id}, this)">Annulla</button>
+            ` : '';
+
+            return `<tr>
+                <td>${escapeHtml(inv.email)}</td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td>${escapeHtml(inv.invited_by_name)}</td>
+                <td style="white-space:nowrap">${formatDate(inv.created_at)}</td>
+                <td style="white-space:nowrap">${formatDate(inv.expires_at)}</td>
+                <td style="white-space:nowrap">${actions}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        console.error('Load invites error:', e);
+    }
+}
+
+async function cancelInvite(id, btn) {
+    if (!confirm('Annullare questo invito?')) return;
+    btn.disabled = true;
+    try {
+        const res = await apiFetch(`/api/admin/invites/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadInvites();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Errore');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function resendInvite(id, btn) {
+    btn.disabled = true;
+    try {
+        const res = await apiFetch(`/api/admin/invites/${id}/resend`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            if (data.warning) alert(data.warning);
+            loadInvites();
+        } else {
+            alert(data.error || 'Errore');
+        }
     } finally {
         btn.disabled = false;
     }
@@ -159,11 +266,14 @@ function updateCountdownDisplay() {
 // --- Photo management ---
 
 let adminPhotoFilter = null;
+let adminShowArchived = false;
 
-async function loadAdminPhotos(status) {
+async function loadAdminPhotos(status, archived) {
     if (status !== undefined) adminPhotoFilter = status;
+    if (archived !== undefined) adminShowArchived = archived;
     const params = new URLSearchParams();
     if (adminPhotoFilter) params.set('status', adminPhotoFilter);
+    if (adminShowArchived) params.set('archived', '1');
 
     try {
         const res = await apiFetch(`/api/admin/photos?${params}`);
@@ -193,6 +303,8 @@ function renderAdminPhotos(photos) {
                 <td>${p.notes ? escapeHtml(p.notes) : '<span style="color:var(--text-light)">-</span>'}</td>
                 <td style="white-space:nowrap">
                     ${p.status !== 'SCARTO' ? `<button class="btn btn-small btn-secondary" onclick="discardPhoto('${p.uuid}', this)">Scarta</button> ` : ''}
+                    ${p.status === 'INFRAZIONE' && !p.archived ? `<button class="btn btn-small btn-primary" onclick="archivePhoto('${p.uuid}', this)">Archivia</button> ` : ''}
+                    ${p.archived ? `<button class="btn btn-small btn-primary" onclick="unarchivePhoto('${p.uuid}', this)">Ripristina</button> ` : ''}
                     <button class="btn btn-small btn-danger" onclick="deletePhoto('${p.uuid}', this)">Elimina</button>
                 </td>
             </tr>
@@ -200,10 +312,10 @@ function renderAdminPhotos(photos) {
         '</tbody></table></div>';
 }
 
-function filterAdminPhotos(status, btn) {
+function filterAdminPhotos(status, archived, btn) {
     document.querySelectorAll('.filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    loadAdminPhotos(status);
+    loadAdminPhotos(status, !!archived);
 }
 
 async function discardPhoto(uuid, btn) {
@@ -234,6 +346,42 @@ async function deletePhoto(uuid, btn) {
     } finally {
         btn.disabled = false;
     }
+}
+
+async function archivePhoto(uuid, btn) {
+    btn.disabled = true;
+    try {
+        const res = await apiFetch(`/api/admin/photos/${uuid}/archive`, { method: 'POST' });
+        if (res.ok) loadAdminPhotos();
+        else {
+            const data = await res.json();
+            alert(data.error || 'Errore');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function unarchivePhoto(uuid, btn) {
+    btn.disabled = true;
+    try {
+        const res = await apiFetch(`/api/admin/photos/${uuid}/unarchive`, { method: 'POST' });
+        if (res.ok) loadAdminPhotos();
+        else {
+            const data = await res.json();
+            alert(data.error || 'Errore');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function downloadReport() {
+    const params = new URLSearchParams();
+    if (adminPhotoFilter) params.set('status', adminPhotoFilter);
+    else params.set('status', 'INFRAZIONE');
+    if (adminShowArchived) params.set('archived', '1');
+    window.open(`/api/admin/photos/report?${params}`, '_blank');
 }
 
 async function showAdminPhotoDetail(uuid) {

@@ -19,7 +19,7 @@ db.exec(`
         email       TEXT UNIQUE NOT NULL,
         password    TEXT NOT NULL,
         name        TEXT NOT NULL,
-        role        TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user')),
+        role        TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user','councilor')),
         active      INTEGER NOT NULL DEFAULT 1,
         created_at  TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
@@ -70,6 +70,45 @@ db.exec(`
         updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 `);
+
+// Add archived column to photos (idempotent)
+try {
+    db.exec(`ALTER TABLE photos ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`);
+} catch (e) {
+    // Column already exists — ignore
+}
+
+// Migration: add 'councilor' role to CHECK constraint
+try {
+    // Test if 'councilor' role is accepted
+    db.prepare("INSERT INTO users (email, password, name, role) VALUES ('__test_councilor__', '__', '__', 'councilor')").run();
+    db.prepare("DELETE FROM users WHERE email = '__test_councilor__'").run();
+} catch (e) {
+    // CHECK constraint rejects 'councilor' — need to recreate table
+    try {
+        db.pragma('foreign_keys = OFF');
+        db.pragma('legacy_alter_table = ON');
+        db.transaction(() => {
+            db.exec(`ALTER TABLE users RENAME TO users_old`);
+            db.exec(`CREATE TABLE users (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                email       TEXT UNIQUE NOT NULL,
+                password    TEXT NOT NULL,
+                name        TEXT NOT NULL,
+                role        TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user','councilor')),
+                active      INTEGER NOT NULL DEFAULT 1,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            )`);
+            db.exec(`INSERT INTO users SELECT * FROM users_old`);
+            db.exec(`DROP TABLE users_old`);
+        })();
+        db.pragma('legacy_alter_table = OFF');
+        db.pragma('foreign_keys = ON');
+    } catch (migErr) {
+        console.error('Councilor migration failed:', migErr.message);
+    }
+}
 
 // Seed default settings
 const defaultSettings = {

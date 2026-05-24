@@ -26,7 +26,7 @@ async function initApp() {
         window.USER = user;
 
         document.getElementById('user-name').textContent = user.name;
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'councilor') {
             document.getElementById('admin-link').style.display = 'inline';
         }
 
@@ -48,11 +48,26 @@ async function initApp() {
             initCamera();
         }
 
+        // Show "Come funziona" card on first visit
+        if (!localStorage.getItem('howItWorksDismissed')) {
+            document.getElementById('how-it-works').style.display = '';
+        }
+
         loadPhotos();
     } catch (e) {
         console.error('Init error:', e);
         window.location.href = '/login';
     }
+}
+
+function dismissHowItWorks() {
+    localStorage.setItem('howItWorksDismissed', '1');
+    document.getElementById('how-it-works').style.display = 'none';
+}
+
+function showHowItWorks() {
+    localStorage.removeItem('howItWorksDismissed');
+    document.getElementById('how-it-works').style.display = '';
 }
 
 async function logout() {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sniper - Admin</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <header>
@@ -47,6 +48,23 @@
         </form>
         <div id="invite-msg" style="display:none"></div>
 
+        <h2 style="margin-top:32px">Inviti inviati</h2>
+        <div style="overflow-x:auto">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Stato</th>
+                        <th>Inviato da</th>
+                        <th>Inviato il</th>
+                        <th>Scade il</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="invites-tbody"></tbody>
+            </table>
+        </div>
+
         <h2>Utenti</h2>
         <div style="overflow-x:auto">
             <table class="users-table">
@@ -66,10 +84,12 @@
 
         <h2 style="margin-top:32px">Gestione foto</h2>
         <div class="filter-bar">
-            <button class="filter-btn active" onclick="filterAdminPhotos(null, this)">Tutte</button>
-            <button class="filter-btn" onclick="filterAdminPhotos('PENDING', this)">Pendenti</button>
-            <button class="filter-btn" onclick="filterAdminPhotos('INFRAZIONE', this)">Infrazioni</button>
-            <button class="filter-btn" onclick="filterAdminPhotos('SCARTO', this)">Scarti</button>
+            <button class="filter-btn active" onclick="filterAdminPhotos(null, false, this)">Tutte</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('PENDING', false, this)">Pendenti</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('INFRAZIONE', false, this)">Infrazioni</button>
+            <button class="filter-btn" onclick="filterAdminPhotos('SCARTO', false, this)">Scarti</button>
+            <button class="filter-btn" onclick="filterAdminPhotos(null, true, this)">Archiviati</button>
+            <button class="btn btn-small btn-primary" onclick="downloadReport()" style="margin-left:auto">Crea Report PDF</button>
         </div>
         <div id="admin-photo-list"></div>
     </div>

@@ -1,4 +1,7 @@
 const express = require('express');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
@@ -61,6 +64,30 @@ app.use((err, req, res, next) => {
 
 scheduler.start();
 
-app.listen(config.PORT, () => {
-    console.log(`Sniper avviato su porta ${config.PORT}`);
-});
+const SSL_DIR = path.join(__dirname, 'ssl');
+const sslExists = fs.existsSync(path.join(SSL_DIR, 'cert.pem')) && fs.existsSync(path.join(SSL_DIR, 'key.pem'));
+
+if (sslExists && config.NODE_ENV === 'production') {
+    const sslOptions = {
+        cert: fs.readFileSync(path.join(SSL_DIR, 'cert.pem')),
+        key: fs.readFileSync(path.join(SSL_DIR, 'key.pem')),
+    };
+
+    // HTTPS on main port
+    https.createServer(sslOptions, app).listen(config.PORT, () => {
+        console.log(`Sniper HTTPS avviato su porta ${config.PORT}`);
+    });
+
+    // HTTP redirect on port 3000
+    const redirect = express();
+    redirect.use((req, res) => {
+        res.redirect(301, `https://${req.headers.host}${req.url}`);
+    });
+    http.createServer(redirect).listen(3000, () => {
+        console.log('HTTP redirect attivo su porta 3000');
+    });
+} else {
+    app.listen(config.PORT, () => {
+        console.log(`Sniper avviato su porta ${config.PORT}`);
+    });
+}
